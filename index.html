@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NetWatch — Moniteur Réseau</title>
+
+  <!-- IBM Plex Mono — terminal feel -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet"
+  />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+  <!-- ═══════════════ HEADER ══════════════════════════════════════════════ -->
+  <header class="header">
+    <div class="logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="2" y1="12" x2="22" y2="12"/>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+      </svg>
+      NETWATCH
+    </div>
+
+    <div class="status-badge" id="status-badge">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-label">CONNECTING…</span>
+    </div>
+
+    <div class="header-stats">
+      <div class="hstat">
+        <span class="hstat-label">PAQUETS</span>
+        <span class="hstat-value" id="h-packets">—</span>
+      </div>
+      <div class="hstat">
+        <span class="hstat-label">BANDE PASSANTE</span>
+        <span class="hstat-value" id="h-bps">—</span>
+      </div>
+      <div class="hstat">
+        <span class="hstat-label">IPs UNIQUES</span>
+        <span class="hstat-value" id="h-ips">—</span>
+      </div>
+      <div class="hstat">
+        <span class="hstat-label">PKT/S</span>
+        <span class="hstat-value" id="h-pps">—</span>
+      </div>
+    </div>
+
+    <div class="alert-counter" id="alert-counter">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      <span id="h-alerts">0</span>
+      <span>ALERTES</span>
+    </div>
+  </header>
+
+  <!-- ═══════════════ MAIN GRID ════════════════════════════════════════════ -->
+  <main class="dashboard">
+
+    <!-- Row 1 ── Bandwidth (wide) + Protocols (narrow) -->
+    <section class="card card--bw" id="card-bw">
+      <div class="card-header">
+        <span class="card-title">Bande Passante en Temps Réel</span>
+        <div class="card-legend">
+          <span class="legend-dot" style="background:var(--c-cyan)"></span>octets/s
+          <span class="legend-dot" style="background:var(--c-green)"></span>paquets/s
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="chart-bw"></canvas>
+      </div>
+    </section>
+
+    <section class="card card--proto" id="card-proto">
+      <div class="card-header">
+        <span class="card-title">Protocoles</span>
+      </div>
+      <div class="chart-wrap chart-wrap--donut">
+        <canvas id="chart-proto"></canvas>
+      </div>
+      <div id="proto-legend" class="proto-legend"></div>
+    </section>
+
+    <!-- Row 2 ── Top IPs (medium) + Alerts (medium) -->
+    <section class="card card--topips" id="card-topips">
+      <div class="card-header">
+        <span class="card-title">Top Émetteurs</span>
+      </div>
+      <div id="topips-list" class="topips-list"></div>
+    </section>
+
+    <section class="card card--alerts" id="card-alerts">
+      <div class="card-header">
+        <span class="card-title">Flux d'Alertes</span>
+        <button class="clear-btn" id="clear-alerts">Effacer</button>
+      </div>
+      <div id="alerts-feed" class="alerts-feed"></div>
+    </section>
+
+    <!-- Row 3 ── Live connections (full width) -->
+    <section class="card card--conns" id="card-conns">
+      <div class="card-header">
+        <span class="card-title">Connexions en Direct</span>
+        <span class="conn-count">(<span id="conn-count">0</span>)</span>
+      </div>
+      <div class="table-wrap">
+        <table class="conn-table">
+          <thead>
+            <tr>
+              <th>Heure</th>
+              <th>Source</th>
+              <th>Destination</th>
+              <th>Proto</th>
+              <th>Taille</th>
+              <th>Flags</th>
+            </tr>
+          </thead>
+          <tbody id="conn-tbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="js/ws.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/alerts.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

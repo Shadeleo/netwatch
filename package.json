@@ -1,0 +1,43 @@
+{
+  "name": "netwatch",
+  "version": "1.0.0",
+  "description": "NetWatch — Real-time network monitor dashboard with anomaly detection",
+  "author": "NetWatch Team",
+  "license": "MIT",
+  "main": "Server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "scripts": {
+    "start": "node Server.js",
+    "dev": "node Server.js",
+    "server": "node Server.js",
+    "backend": "cd backend/python && python api_server.py",
+    "backend:dev": "cd backend/python && python api_server.py",
+    "setup": "npm install && cd backend/python && pip install -r requirements.txt",
+    "lint": "echo 'Add linting tools as needed'",
+    "test": "echo 'Add tests as needed'"
+  },
+  "dependencies": {
+    "express": "^4.21.1",
+    "http-proxy-middleware": "^3.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/netwatch.git"
+  },
+  "keywords": [
+    "network",
+    "monitoring",
+    "security",
+    "real-time",
+    "dashboard",
+    "anomaly-detection",
+    "packet-capture"
+  ],
+  "homepage": "https://github.com/YOUR_USERNAME/netwatch#readme"
+}

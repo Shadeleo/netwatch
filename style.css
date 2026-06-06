@@ -1,0 +1,500 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   NetWatch — Dashboard Stylesheet
+   Aesthetic: Retro-terminal / Military ELINT station
+   Fonts: IBM Plex Mono (monospace), IBM Plex Sans (labels)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── CSS Custom Properties ─────────────────────────────────────────── */
+:root {
+  --bg-void:    #020810;
+  --bg-base:    #050e1d;
+  --bg-card:    #071428;
+  --bg-card-hl: #0b1d3a;
+  --bg-row:     #091530;
+
+  --border:     #0e2448;
+  --border-hl:  #16377a;
+
+  --c-cyan:     #00e5ff;
+  --c-cyan-dim: rgba(0, 229, 255, 0.15);
+  --c-green:    #39ff14;
+  --c-green-dim:rgba(57, 255, 20, 0.12);
+  --c-yellow:   #ffd600;
+  --c-orange:   #ff6d00;
+  --c-red:      #ff1744;
+  --c-purple:   #d500f9;
+
+  --text-pri:   #c4dff7;
+  --text-sec:   #5a8abf;
+  --text-dim:   #1f3a5f;
+
+  --font-mono:  'IBM Plex Mono', 'Courier New', monospace;
+  --font-sans:  'IBM Plex Sans', system-ui, sans-serif;
+
+  --radius:     4px;
+  --radius-lg:  6px;
+  --glow-cyan:  0 0 16px rgba(0,229,255,0.25);
+  --glow-red:   0 0 16px rgba(255,23,68,0.35);
+}
+
+/* ── Reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+
+body {
+  min-height: 100%;
+  background: var(--bg-void);
+  color: var(--text-pri);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  /* Subtle scanline overlay */
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.05) 2px,
+      rgba(0,0,0,0.05) 4px
+    ),
+    radial-gradient(ellipse at 50% 0%, rgba(0,40,80,0.4) 0%, transparent 70%);
+}
+
+/* ── Header ─────────────────────────────────────────────────────────── */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 20px;
+  height: 52px;
+  background: rgba(5, 14, 29, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.6);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--c-cyan);
+  text-shadow: var(--glow-cyan);
+  flex-shrink: 0;
+}
+
+/* Status badge */
+.status-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--text-sec);
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.status-badge.live {
+  color: var(--c-green);
+  border-color: var(--c-green);
+  text-shadow: 0 0 8px var(--c-green);
+}
+.status-badge.error {
+  color: var(--c-red);
+  border-color: var(--c-red);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.status-badge.live .status-dot {
+  background: var(--c-green);
+  box-shadow: 0 0 8px var(--c-green);
+  animation: pulse-dot 1.4s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.5; transform: scale(0.75); }
+}
+
+/* Header stats */
+.header-stats {
+  display: flex;
+  gap: 1px;
+  margin-left: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.hstat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 18px;
+  background: var(--bg-card);
+}
+.hstat + .hstat { border-left: 1px solid var(--border); }
+.hstat-label {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--text-sec);
+}
+.hstat-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-cyan);
+  letter-spacing: 0.05em;
+}
+
+/* Alert counter */
+.alert-counter {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--text-sec);
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+.alert-counter.has-alerts {
+  border-color: var(--c-red);
+  color: var(--c-red);
+  box-shadow: var(--glow-red);
+  animation: alert-pulse 2s ease-in-out infinite;
+}
+@keyframes alert-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(255,23,68,0.3); }
+  50%       { box-shadow: 0 0 20px rgba(255,23,68,0.7); }
+}
+
+/* ── Dashboard Grid ─────────────────────────────────────────────────── */
+.dashboard {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  grid-template-rows: 280px auto 1fr;
+  grid-template-areas:
+    "bw     proto"
+    "topips alerts"
+    "conns  conns";
+  gap: 10px;
+  padding: 10px;
+  height: calc(100vh - 52px);
+  min-height: 600px;
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: border-color 0.3s;
+}
+.card:hover { border-color: var(--border-hl); }
+
+.card--bw     { grid-area: bw; }
+.card--proto  { grid-area: proto; }
+.card--topips { grid-area: topips; }
+.card--alerts { grid-area: alerts; }
+.card--conns  { grid-area: conns; }
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.card-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: var(--text-sec);
+  text-transform: uppercase;
+}
+.card-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--text-sec);
+}
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+/* ── Chart containers ───────────────────────────────────────────────── */
+.chart-wrap {
+  flex: 1;
+  padding: 10px 12px 8px;
+  position: relative;
+  min-height: 0;
+}
+.chart-wrap--donut {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+}
+
+/* ── Protocol legend (under the donut) ─────────────────────────────── */
+.proto-legend {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.proto-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-sec);
+}
+.proto-row-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+.proto-row-name { flex: 1; color: var(--text-pri); }
+.proto-row-count { color: var(--c-cyan); font-weight: 600; }
+
+/* ── Top IPs list ───────────────────────────────────────────────────── */
+.topips-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ip-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.ip-row-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
+.ip-addr { color: var(--c-cyan); font-weight: 600; }
+.ip-bytes { color: var(--text-sec); }
+.ip-bar-track {
+  height: 4px;
+  background: var(--bg-void);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.ip-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--c-cyan), #0090ff);
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+/* ── Alerts feed ────────────────────────────────────────────────────── */
+.alerts-feed {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.alert-card {
+  padding: 8px 10px;
+  border-left: 3px solid var(--border);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--bg-card-hl);
+  animation: slide-in 0.3s ease;
+  flex-shrink: 0;
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.alert-card.sev-low      { border-color: var(--c-cyan); }
+.alert-card.sev-medium   { border-color: var(--c-yellow); }
+.alert-card.sev-high     { border-color: var(--c-orange); }
+.alert-card.sev-critical {
+  border-color: var(--c-red);
+  animation: slide-in 0.3s ease, crit-flash 1.5s ease 0.3s 2;
+}
+@keyframes crit-flash {
+  0%, 100% { background: var(--bg-card-hl); }
+  50%       { background: rgba(255,23,68,0.1); }
+}
+
+.alert-type {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.sev-low    .alert-type { color: var(--c-cyan); }
+.sev-medium .alert-type { color: var(--c-yellow); }
+.sev-high   .alert-type { color: var(--c-orange); }
+.sev-critical .alert-type { color: var(--c-red); }
+
+.alert-desc { font-size: 11px; color: var(--text-pri); margin-bottom: 3px; }
+.alert-meta { font-size: 10px; color: var(--text-sec); }
+
+.clear-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-sec);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.clear-btn:hover {
+  border-color: var(--c-red);
+  color: var(--c-red);
+}
+
+/* ── Connection table ───────────────────────────────────────────────── */
+.conn-count { font-size: 10px; color: var(--text-sec); }
+
+.table-wrap {
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.conn-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.conn-table thead {
+  position: sticky;
+  top: 0;
+  background: var(--bg-card);
+  z-index: 10;
+}
+
+.conn-table th {
+  padding: 6px 12px;
+  text-align: left;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  color: var(--text-sec);
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.conn-table td {
+  padding: 5px 12px;
+  border-bottom: 1px solid rgba(14, 36, 72, 0.5);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+}
+
+.conn-table tbody tr { transition: background 0.15s; }
+.conn-table tbody tr:hover { background: var(--bg-card-hl); }
+
+.conn-table tbody tr.row-new {
+  animation: row-flash 0.6s ease;
+}
+@keyframes row-flash {
+  from { background: rgba(0, 229, 255, 0.08); }
+  to   { background: transparent; }
+}
+
+.td-time  { color: var(--text-sec); font-size: 10px; }
+.td-src   { color: var(--c-cyan); }
+.td-dst   { color: var(--text-pri); }
+.td-proto { display: inline-block; padding: 1px 5px; border-radius: 2px; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; }
+.td-size  { color: var(--text-sec); }
+.td-flags { font-size: 10px; font-weight: 600; letter-spacing: 0.05em; }
+
+/* Protocol badge colors */
+.proto-TCP   { background: rgba(0,229,255,0.12); color: var(--c-cyan); }
+.proto-UDP   { background: rgba(57,255,20,0.1);  color: var(--c-green); }
+.proto-DNS   { background: rgba(255,214,0,0.12); color: var(--c-yellow); }
+.proto-ICMP  { background: rgba(213,0,249,0.12); color: var(--c-purple); }
+.proto-OTHER { background: rgba(255,255,255,0.06); color: var(--text-sec); }
+
+/* Flag colors */
+.flag-S  { color: var(--c-orange); }
+.flag-SA { color: var(--c-green); }
+.flag-A  { color: var(--text-sec); }
+.flag-PA { color: var(--c-cyan); }
+.flag-FA { color: var(--c-yellow); }
+.flag-R  { color: var(--c-red); }
+
+/* ── Scrollbars ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hl); }
+
+/* ── Empty state ────────────────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 60px;
+  color: var(--text-dim);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "bw"
+      "proto"
+      "topips"
+      "alerts"
+      "conns";
+    height: auto;
+  }
+  .card--bw    { min-height: 250px; }
+  .card--proto { min-height: 260px; }
+  .card--conns { min-height: 300px; }
+  .header-stats { display: none; }
+} 

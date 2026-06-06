@@ -1,0 +1,45 @@
+# Auto detect text files and normalize line endings to LF
+* text=auto
+
+# Python
+*.py text eol=lf
+*.pyw text eol=lf
+requirements.txt text eol=lf
+
+# JavaScript/Node
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.sh text eol=lf
+
+# Markup
+*.html text eol=lf
+*.css text eol=lf
+*.xml text eol=lf
+
+# Windows
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.exe binary
+
+# Binary files
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mov binary
+*.mp4 binary
+*.mp3 binary
+*.gz binary
+*.zip binary
+*.7z binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
