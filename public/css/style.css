@@ -665,3 +665,10 @@ body {
   text-overflow: ellipsis;
   max-width: 120px;
 }
+
+.ip-device {
+  font-size: 10px;
+  color: var(--c-gold);
+  font-family: var(--font-data);
+  font-weight: 500;
+}
