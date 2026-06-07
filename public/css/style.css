@@ -623,3 +623,45 @@ body {
   font-family: var(--font-ui);
   text-transform: uppercase;
 }
+
+/* ── DNS / Org resolution ────────────────────────────────────────────── */
+.ip-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.ip-hostname {
+  font-size: 10px;
+  color: var(--text-sec);
+  font-family: var(--font-data);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.ip-org {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.ip-country {
+  font-size: 9px;
+  font-weight: 600;
+  font-family: var(--font-ui);
+  color: var(--c-gold);
+  letter-spacing: 0.06em;
+}
+
+.ip-orgname {
+  font-size: 9px;
+  color: var(--text-sec);
+  font-family: var(--font-data);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
