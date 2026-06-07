@@ -21,15 +21,20 @@ const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ── REST API proxy ───────────────────────────────────────────────────────────
+// ── REST API proxy ───────────────────────────────────────────────────────────
 app.use(
   '/api',
   createProxyMiddleware({
     target: BACKEND_URL,
     changeOrigin: true,
+    pathRewrite: { '^/': '/api/' },   // ← ajoute cette ligne
     on: {
       error: (err, req, res) => {
         console.error('[proxy] API error:', err.message);
         res.status(502).json({ error: 'Backend unreachable', detail: err.message });
+      },
+      proxyReq: (proxyReq, req) => {
+        console.log('[proxy] →', req.method, req.url);
       },
     },
   })
