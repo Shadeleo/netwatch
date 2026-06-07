@@ -68,7 +68,7 @@ jobs:
       continue-on-error: true
     
     - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: 'trivy-results.sarif'
       continue-on-error: true
@@ -98,11 +98,11 @@ jobs:
     - name: Create release artifact
       run: |
         mkdir -p release
-        cp -r backend frontend public *.js *.json *.md .env.example release/
+        cp -r backend public *.js *.json *.md .env.example release/
         zip -r netwatch-release.zip release/
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: netwatch-release
         path: netwatch-release.zip
