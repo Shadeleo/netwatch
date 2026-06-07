@@ -8,7 +8,6 @@ class NetWatchApp {
     this.maxConnections = 50;
     this.connections = [];
     this.stats = null;
-    this.deviceNames = {};
     this.init();
   }
 
@@ -27,7 +26,6 @@ class NetWatchApp {
 
     // Initialize UI
     this.setupUI();
-    this.loadDeviceNames();
   }
 
   /**
@@ -141,14 +139,15 @@ class NetWatchApp {
    * Update live connections table
    */
   updateConnections(stats) {
-    const tbody   = document.getElementById('conn-tbody');
+    const tbody = document.getElementById('conn-tbody');
     const countEl = document.getElementById('conn-count');
+    
     if (!tbody) return;
 
     const recentConns = stats.recent_connections || [];
 
     if (recentConns.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Aucune connexion</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Aucune connexion</td></tr>';
       if (countEl) countEl.textContent = '0';
       return;
     }
@@ -160,35 +159,6 @@ class NetWatchApp {
       .reverse()
       .map((conn, idx) => this.createConnectionRow(conn, idx === 0))
       .join('');
-
-    // Injecte le cache immédiatement après le rendu
-    this._injectCachedResolutions();
-
-    // Puis fetch les IPs manquantes
-    this.resolveVisibleIPs();
-  }
-
-  _injectCachedResolutions() {
-    // Injecte les noms de devices locaux
-    Object.entries(this.deviceNames).forEach(([ip, name]) => {
-      document.querySelectorAll(`.ip-addr`).forEach(el => {
-        if (el.textContent === ip) {
-          const cell = el.closest('.ip-cell');
-          if (cell && !cell.querySelector('.ip-device')) {
-            const span = document.createElement('span');
-            span.className = 'ip-device';
-            span.textContent = `· ${name}`;
-            cell.appendChild(span);
-          }
-        }
-      });
-    });
-
-    // Injecte le cache DNS externe
-    if (!this._resolveCache) return;
-    Object.entries(this._resolveCache).forEach(([ip, data]) => {
-      this._applyResolveData(ip, data);
-    });
   }
 
   /**
@@ -216,28 +186,20 @@ class NetWatchApp {
 
     // IPs privées → pas de résolution
     const isPrivate = (ip) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
-    const deviceName = (ip) => this.deviceNames[ip] || null;
-
 
     const srcHtml = `
       <span class="ip-cell">
         <span class="ip-addr">${conn.src}</span>
-        ${deviceName(conn.src)
-          ? `<span class="ip-device">· ${deviceName(conn.src)}</span>`
-          : (!isPrivate(conn.src) ? `<span class="ip-hostname" data-ip="${conn.src}">…</span>` : '')
-        }
+        ${!isPrivate(conn.src) ? `<span class="ip-hostname" data-ip="${conn.src}">…</span>` : ''}
       </span>`;
 
     const dstHtml = `
       <span class="ip-cell">
         <span class="ip-addr">${conn.dst}</span>
-        ${deviceName(conn.dst)
-          ? `<span class="ip-device">· ${deviceName(conn.dst)}</span>`
-          : (!isPrivate(conn.dst)
-              ? `<span class="ip-hostname" data-ip="${conn.dst}">…</span>
-                <span class="ip-org" data-ip="${conn.dst}"></span>`
-              : '')
-        }
+        ${!isPrivate(conn.dst)
+          ? `<span class="ip-hostname" data-ip="${conn.dst}">…</span>
+            <span class="ip-org"     data-ip="${conn.dst}"></span>`
+          : ''}
       </span>`;
 
     return `
@@ -254,58 +216,37 @@ class NetWatchApp {
       </tr>`;
   }
 
-  async loadDeviceNames() {
-    try {
-      const res  = await fetch('/api/devices');
-      const data = await res.json();
-      (data.devices || []).forEach(d => {
-        if (d.ip && d.name) this.deviceNames[d.ip] = d.name;
-      });
-    } catch (_) {}
-
-    // Refresh toutes les 5 minutes
-    setTimeout(() => this.loadDeviceNames(), 5 * 60 * 1000);
-  }
-
   async resolveVisibleIPs() {
     const pending = document.querySelectorAll('[data-ip]');
-    const toFetch = new Set();
+    const seen    = new Set();
 
-    // Injecte depuis le cache local d'abord (instantané)
-    pending.forEach(el => {
+    for (const el of pending) {
       const ip = el.dataset.ip;
-      if (this._resolveCache && this._resolveCache[ip]) {
-        this._applyResolveData(ip, this._resolveCache[ip]);
-      } else {
-        toFetch.add(ip);
-      }
-    });
+      if (seen.has(ip)) continue;
+      seen.add(ip);
 
-    // Fetch uniquement les IPs pas encore en cache
-    for (const ip of toFetch) {
+      // évite de re-résoudre si déjà rempli
+      if (el.textContent && el.textContent !== '…') continue;
+
       try {
         const res  = await fetch(`/api/resolve?ip=${ip}`);
         const data = await res.json();
 
-        if (!this._resolveCache) this._resolveCache = {};
-        this._resolveCache[ip] = data;
+        // Rempli tous les spans qui portent ce data-ip
+        document.querySelectorAll(`.ip-hostname[data-ip="${ip}"]`).forEach(el => {
+          el.textContent = data.hostname || '';
+        });
 
-        this._applyResolveData(ip, data);
-      } catch (_) {}
+        document.querySelectorAll(`.ip-org[data-ip="${ip}"]`).forEach(el => {
+          const country = data.country_code || '';
+          const org     = data.org ? data.org.replace(/^AS\d+\s*/,'') : '';
+          el.innerHTML  = country || org
+            ? `<span class="ip-country">${country}</span>${org ? `<span class="ip-orgname">${org}</span>` : ''}`
+            : '';
+        });
+
+      } catch (_) { /* silencieux */ }
     }
-  }
-
-  _applyResolveData(ip, data) {
-    document.querySelectorAll(`.ip-hostname[data-ip="${ip}"]`).forEach(el => {
-      el.textContent = data.hostname || '';
-    });
-    document.querySelectorAll(`.ip-org[data-ip="${ip}"]`).forEach(el => {
-      const country = data.country_code || '';
-      const org     = data.org ? data.org.replace(/^AS\d+\s*/, '') : '';
-      el.innerHTML  = country || org
-        ? `<span class="ip-country">${country}</span>${org ? `<span class="ip-orgname">${org}</span>` : ''}`
-        : '';
-    });
   }
 
   /**
