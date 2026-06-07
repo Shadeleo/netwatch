@@ -595,3 +595,31 @@ body {
   .header-stats { display: none; }
   .alert-panel  { width: 100%; }
 }
+
+/* ── Port columns ────────────────────────────────────────────────────── */
+.td-port {
+  color: var(--text-sec);
+  font-family: var(--font-data);
+  font-size: 11px;
+}
+
+.port-known {
+  color: var(--c-gold);
+  font-weight: 500;
+  cursor: default;
+}
+
+/* ── Service badge ───────────────────────────────────────────────────── */
+.service-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 2px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  background: rgba(196,160,96,0.10);
+  color: var(--c-gold);
+  border: 1px solid rgba(196,160,96,0.20);
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+}

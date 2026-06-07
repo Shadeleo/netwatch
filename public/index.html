@@ -65,13 +65,13 @@
   <!-- ═══════════════ MAIN GRID ════════════════════════════════════════════ -->
   <main class="dashboard">
 
-    <!-- Row 1 ── Bandwidth (wide) + Protocols (narrow) -->
-    <section class="card card--bw" id="card-bw">
+    <!-- Row 1 ── Bandwidth + Protocols -->
+    <section class="card card--bw">
       <div class="card-header">
         <span class="card-title">Bande Passante en Temps Réel</span>
         <div class="card-legend">
-          <span class="legend-dot" style="background:var(--c-cyan)"></span>octets/s
-          <span class="legend-dot" style="background:var(--c-green)"></span>paquets/s
+          <span class="legend-dot" style="background:var(--c-gold)"></span>octets/s
+          <span class="legend-dot" style="background:var(--c-grey)"></span>paquets/s
         </div>
       </div>
       <div class="chart-wrap">
@@ -79,7 +79,7 @@
       </div>
     </section>
 
-    <section class="card card--proto" id="card-proto">
+    <section class="card card--proto">
       <div class="card-header">
         <span class="card-title">Protocoles</span>
       </div>
@@ -89,15 +89,15 @@
       <div id="proto-legend" class="proto-legend"></div>
     </section>
 
-    <!-- Row 2 ── Top IPs (medium) + Alerts (medium) -->
-    <section class="card card--topips" id="card-topips">
+    <!-- Row 2 ── Top IPs + Alerts -->
+    <section class="card card--topips">
       <div class="card-header">
         <span class="card-title">Top Émetteurs</span>
       </div>
       <div id="topips-list" class="topips-list"></div>
     </section>
 
-    <section class="card card--alerts" id="card-alerts">
+    <section class="card card--alerts">
       <div class="card-header">
         <span class="card-title">Flux d'Alertes</span>
         <button class="clear-btn" id="clear-alerts">Effacer</button>
@@ -106,7 +106,7 @@
     </section>
 
     <!-- Row 3 ── Live connections (full width) -->
-    <section class="card card--conns" id="card-conns">
+    <section class="card card--conns">
       <div class="card-header">
         <span class="card-title">Connexions en Direct</span>
         <span class="conn-count">(<span id="conn-count">0</span>)</span>
@@ -117,10 +117,13 @@
             <tr>
               <th>Heure</th>
               <th>Source</th>
+              <th>Port src</th>
               <th>Destination</th>
+              <th>Port dst</th>
+              <th>Service</th>
               <th>Proto</th>
-              <th>Taille</th>
               <th>Flags</th>
+              <th>Taille</th>
             </tr>
           </thead>
           <tbody id="conn-tbody"></tbody>

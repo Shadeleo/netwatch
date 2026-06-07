@@ -163,26 +163,38 @@ class NetWatchApp {
    * Create table row for connection
    */
   createConnectionRow(conn, isNew = false) {
-    const time = this.formatTime(conn.timestamp);
-    const proto = conn.protocol || 'OTHER';
-    const size = this.formatBytes(conn.size);
-    const flags = conn.flags || '—';
+    const time     = this.formatTime(conn.timestamp);
+    const proto    = conn.protocol || 'OTHER';
+    const size     = this.formatBytes(conn.size);
+    const flags    = conn.flags || '—';
+    const srcPort  = conn.src_port || '—';
+    const dstPort  = conn.dst_port || '—';
+    const service  = conn.service  || '';
 
-    const rowClass = isNew ? 'row-new' : '';
+    const rowClass   = isNew ? 'row-new' : '';
     const protoClass = `proto-${proto.toUpperCase()}`;
+
+    const dstPortHtml = service
+      ? `<span class="port-known" title="${service}">${dstPort}</span>`
+      : dstPort;
+
+    const serviceHtml = service
+      ? `<span class="service-badge">${service}</span>`
+      : '—';
 
     return `
       <tr class="${rowClass}">
         <td class="td-time">${time}</td>
         <td class="td-src">${conn.src}</td>
+        <td class="td-port">${srcPort}</td>
         <td class="td-dst">${conn.dst}</td>
-        <td class="td-proto">
-          <span class="td-proto ${protoClass}">${proto}</span>
-        </td>
-        <td class="td-size">${size}</td>
+        <td class="td-port">${dstPortHtml}</td>
+        <td>${serviceHtml}</td>
+        <td><span class="td-proto ${protoClass}">${proto}</span></td>
         <td class="td-flags">${this.formatFlags(flags)}</td>
-      </tr>
-    `;
+        <td class="td-size">${size}</td>
+        
+      </tr>`;
   }
 
   /**
