@@ -102,7 +102,7 @@ jobs:
         zip -r netwatch-release.zip release/
     
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: netwatch-release
         path: netwatch-release.zip
