@@ -15,6 +15,13 @@
 - Protocol distribution visualization
 - Network connection monitoring
 
+🔍 **Local Device Discovery**
+- Passive mDNS listener (port 5353) — detects Chromecast, smart TVs, speakers, etc.
+- NetBIOS Name Service queries (port 137) — detects Windows machines
+- MAC address resolution via system ARP table
+- Manufacturer lookup via IEEE OUI database (~30,000 entries, auto-cached)
+- Current machine automatically labeled as **"Ordinateur actuel"**
+
 🚨 **Anomaly Detection**
 - Port scan detection
 - DDoS attack patterns
@@ -24,8 +31,8 @@
 📊 **Professional Dashboard**
 - Real-time line charts (bandwidth/pps)
 - Protocol distribution donut chart
-- Top source IPs ranking
-- Live connection table
+- Top source IPs ranking with device names
+- Live connection table with DNS/org resolution
 - Alert stream with severity levels
 
 ⚡ **Performance**
@@ -111,37 +118,34 @@ netwatch/
 │   │   ├── api_server.py          # FastAPI server with WebSockets
 │   │   ├── network_sniffer.py     # Packet capture engine
 │   │   ├── anomaly_detector.py    # Anomaly detection engine
-│   │   ├── requirements.txt        # Python dependencies
+│   │   ├── device_scanner.py      # Local device discovery (mDNS + NetBIOS)
+│   │   ├── mac_resolver.py        # MAC address + manufacturer resolution
+│   │   ├── resolver.py            # IP → hostname/org/country resolution
+│   │   ├── requirements.txt       # Python dependencies
+│   │   ├── oui_cache.json         # IEEE OUI cache (auto-generated)
 │   │   └── netwatch.db            # SQLite database (auto-created)
 │   └── nodejs/
 │       └── (reserved for future)
 │
 ├── public/
-│   ├── index.html                  # Main dashboard HTML
+│   ├── index.html                 # Main dashboard HTML
 │   ├── css/
-│   │   └── style.css              # Dashboard styles (retro-terminal theme)
+│   │   └── style.css             # Dashboard styles (retro-terminal theme)
 │   └── js/
-│       ├── ws.js                  # WebSocket manager
-│       ├── charts.js              # Chart.js visualizations
-│       ├── alerts.js              # Alert management
-│       └── app.js                 # Main application logic
+│       ├── ws.js                 # WebSocket manager
+│       ├── charts.js             # Chart.js visualizations
+│       ├── alerts.js             # Alert management
+│       └── app.js                # Main application logic
 │
-├── frontend/
-│   └── assets/                    # (reserved for future)
-│
-├── docs/
-│   └── (API documentation)
-│
-├── Server.js                       # Node.js frontend server (Express + proxy)
-├── package.json                    # Node.js dependencies
-├── .env                            # Environment configuration
-├── .env.example                    # Example configuration
-├── .gitignore                      # Git ignore rules
-├── start.bat                       # Windows startup script
-├── start.sh                        # Linux/macOS startup script
-├── README.md                       # This file
-└── LICENSE                         # MIT License
-
+├── Server.js                      # Node.js frontend server (Express + proxy)
+├── package.json                   # Node.js dependencies
+├── .env                           # Environment configuration
+├── .env.example                   # Example configuration
+├── .gitignore                     # Git ignore rules
+├── start.bat                      # Windows startup script
+├── start.sh                       # Linux/macOS startup script
+├── README.md                      # This file
+└── LICENSE                        # MIT License
 ```
 
 ## 🔧 Configuration
@@ -171,6 +175,9 @@ GET /api/stats                   # Current statistics
 GET /api/alerts                  # Recent alerts
 GET /api/history?limit=100       # Connection history
 GET /api/alerts/history?limit=50 # Alert history
+GET /api/devices                 # Discovered local devices (mDNS/NetBIOS/ARP)
+GET /api/resolve?ip=<ip>         # Resolve IP → hostname, org, country
+GET /api/local-ip                # Get current machine's local IP
 ```
 
 ### WebSocket
@@ -192,72 +199,33 @@ WS /ws                           # Real-time updates
 | `UNUSUAL_PROTOCOLS` | Non-standard protocols detected | MEDIUM |
 | `TRAFFIC_CONCENTRATION` | Traffic from single source | LOW |
 
+## 🖥️ Device Discovery
+
+NetWatch passively discovers local devices using two protocols:
+
+- **mDNS** — listens on `224.0.0.251:5353`, identifies Apple, Google, and IoT devices
+- **NetBIOS** — queries port `137`, identifies Windows machines
+- **ARP + IEEE OUI** — resolves MAC addresses to manufacturers (Sagemcom, Google, Harman, etc.)
+
+Devices are cached in SQLite and refreshed every 5 minutes. The machine running NetWatch is always labeled **"Ordinateur actuel"** in the dashboard.
+
 ## 🛡️ Security Notes
 
 ⚠️ **Important**
 - Requires administrator/root privileges for packet capture
-- Only works on local network interfaces
+- Only monitors traffic passing through the local machine's network interface
 - Data is stored in local SQLite database
-- No external data transmission
-
-## 🐳 Docker Deployment (Optional)
-
-```dockerfile
-# Dockerfile (for Python backend)
-FROM python:3.9-slim
-WORKDIR /app
-COPY backend/python /app
-RUN pip install -r requirements.txt
-CMD ["python", "api_server.py"]
-```
-
-## 📚 Development
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│           Browser Dashboard (Port 3000)          │
-│  ├─ HTML/CSS/JS (Vanilla, Chart.js)            │
-│  └─ WebSocket Connection                        │
-└────────────────┬────────────────────────────────┘
-                 │ WS + HTTP Proxy
-┌────────────────▼────────────────────────────────┐
-│       Node.js Server (Express, Port 3000)       │
-│  ├─ Static Asset Serving                        │
-│  ├─ Proxy to Backend API (/api/*)              │
-│  └─ Proxy to WebSocket (/ws)                   │
-└────────────────┬────────────────────────────────┘
-                 │ HTTP/WS
-┌────────────────▼────────────────────────────────┐
-│      Python API Server (FastAPI, Port 8000)     │
-│  ├─ Network Sniffer Thread                      │
-│  ├─ Anomaly Detection Engine                    │
-│  ├─ WebSocket Broadcaster                      │
-│  └─ SQLite Database                            │
-└────────────────┬────────────────────────────────┘
-                 │
-        ┌────────▼──────────┐
-        │ Raw Socket / WinPcap
-        │ (Packet Capture)
-        └───────────────────┘
-```
-
-### Adding New Features
-
-1. **New Chart**: Add canvas to `public/index.html`, implement in `public/js/charts.js`
-2. **New Alert**: Add detection logic to `backend/python/anomaly_detector.py`
-3. **API Endpoint**: Add route to `backend/python/api_server.py`
+- No external data transmission (OUI database cached locally after first download)
 
 ## 🐛 Troubleshooting
 
 ### "Port already in use"
 ```bash
-# Windows: Kill process on port 3000
+# Windows
 netstat -ano | findstr :3000
 taskkill /PID <PID> /F
 
-# Linux/macOS: Kill process on port 3000
+# Linux/macOS
 lsof -ti:3000 | xargs kill -9
 ```
 
@@ -270,6 +238,11 @@ lsof -ti:3000 | xargs kill -9
 - Ensure running with administrator/root privileges
 - Check network interface selection
 - Try different interface in `network_sniffer.py`
+
+### "No devices discovered"
+- mDNS requires devices to be active on the network
+- NetBIOS only works with Windows machines
+- Run as administrator for mDNS multicast access
 
 ### "Permission denied on database"
 - Delete `netwatch.db`
@@ -287,13 +260,6 @@ Contributions welcome! Please:
 3. Commit changes (`git commit -am 'Add amazing feature'`)
 4. Push to branch (`git push origin feature/amazing`)
 5. Open Pull Request
-
-## 📞 Support
-
-For issues and feature requests, visit:
-- GitHub Issues: [Report Bug]
-- Documentation: See `/docs` folder
-- API Docs: http://localhost:8000/docs (when running)
 
 ---
 
