@@ -26,6 +26,7 @@ app.use(
   createProxyMiddleware({
     target: BACKEND_URL,
     changeOrigin: true,
+    pathRewrite: { '^/': '/api/' },
     on: {
       error: (err, req, res) => {
         console.error('[proxy] API error:', err.message);

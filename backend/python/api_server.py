@@ -14,6 +14,7 @@ import time
 from datetime import datetime
 from typing import Dict, List
 from resolver import get_resolver
+from device_scanner import get_scanner
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -144,9 +145,12 @@ def broadcaster():
                 for alert in alerts:
                     save_alert_to_db(alert)
                 
-                # Save recent connections
+                # Save recent connections + scan local IPs
+                scanner = get_scanner()
                 for conn in stats.get("recent_connections", [])[-5:]:
                     save_connection_to_db(conn)
+                    scanner.scan_ip(conn.get("src", ""))
+                    scanner.scan_ip(conn.get("dst", ""))
                 
                 message = {
                     "type": "stats_update",
@@ -199,6 +203,9 @@ async def startup_event():
     # Run sniffer in thread
     sniffer_thread = threading.Thread(target=sniffer.start_sniffing, daemon=True)
     sniffer_thread.start()
+
+    scanner = get_scanner()
+    scanner.start()
     
     # Start broadcaster in thread
     broadcaster_thread = threading.Thread(target=broadcaster, daemon=True)
@@ -290,6 +297,12 @@ async def get_alerts_history(limit: int = 50):
 async def resolve_ip(ip: str):
     """Resolve an IP address to hostname, org, country, city."""
     return get_resolver().resolve_ip(ip)
+
+
+@app.get("/api/devices")
+async def get_devices():
+    """Return all discovered local devices."""
+    return {"devices": get_scanner().get_devices()}    
 # ──────────────────────────────────────────────────────────────────────────────
 # WebSocket Endpoint
 # ──────────────────────────────────────────────────────────────────────────────
