@@ -10,6 +10,8 @@ class NetWatchApp {
     this.stats          = null;
     this.deviceNames    = {};     // ip → device name (local devices)
     this._resolveCache  = {};     // ip → DNS/org data (external IPs)
+    this.localIP = null;
+    this.detectLocalIP();
     this.init();
   }
 
@@ -110,12 +112,18 @@ class NetWatchApp {
         const bytes      = data.bytes || 0;
         const percentage = (bytes / maxBytes) * 100;
         const formatted  = this.formatBytes(bytes);
-        const name       = this.deviceNames[ip] ? ` · ${this.deviceNames[ip]}` : '';
+        
+        let label = '';
+        if (ip === this.localIP) {
+          label = ' · Ordinateur actuel';
+        } else if (this.deviceNames[ip]) {
+          label = ` · ${this.deviceNames[ip]}`;
+        }
 
         return `
           <div class="ip-row">
             <div class="ip-row-top">
-              <span class="ip-addr">${ip}<span class="ip-device">${name}</span></span>
+              <span class="ip-addr">${ip}<span class="ip-device">${label}</span></span>
               <span class="ip-bytes">${formatted}</span>
             </div>
             <div class="ip-bar-track">
@@ -157,6 +165,9 @@ class NetWatchApp {
     // Fetch les IPs manquantes
     this.resolveVisibleIPs();
   }
+
+  // Ajoute cette méthode dans la classe
+
 
   /**
    * Create table row for connection
@@ -269,6 +280,14 @@ class NetWatchApp {
       } catch (_) {}
     }
   }
+
+  async detectLocalIP() {
+  try {
+    const res  = await fetch('/api/local-ip');
+    const data = await res.json();
+    this.localIP = data.ip;
+  } catch (_) {}
+}
 
   /**
    * Apply resolved DNS/org data to DOM spans
