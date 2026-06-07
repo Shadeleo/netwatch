@@ -282,12 +282,12 @@ class NetWatchApp {
   }
 
   async detectLocalIP() {
-  try {
-    const res  = await fetch('/api/local-ip');
-    const data = await res.json();
-    this.localIP = data.ip;
-  } catch (_) {}
-}
+    try {
+      const res  = await fetch('/api/local-ip');
+      const data = await res.json();
+      this.localIP = data.ip;
+    } catch (_) {}
+  }
 
   /**
    * Apply resolved DNS/org data to DOM spans
