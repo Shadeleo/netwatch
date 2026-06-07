@@ -13,6 +13,7 @@ import threading
 import time
 from datetime import datetime
 from typing import Dict, List
+from resolver import get_resolver
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -285,7 +286,10 @@ async def get_alerts_history(limit: int = 50):
     except Exception as e:
         return {"error": str(e), "alerts": []}
 
-
+@app.get("/api/resolve")
+async def resolve_ip(ip: str):
+    """Resolve an IP address to hostname, org, country, city."""
+    return get_resolver().resolve_ip(ip)
 # ──────────────────────────────────────────────────────────────────────────────
 # WebSocket Endpoint
 # ──────────────────────────────────────────────────────────────────────────────

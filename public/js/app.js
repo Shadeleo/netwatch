@@ -63,6 +63,8 @@ class NetWatchApp {
 
     // Update connections table
     this.updateConnections(stats);
+
+    this.resolveVisibleIPs();
   }
 
   /**
@@ -182,19 +184,69 @@ class NetWatchApp {
       ? `<span class="service-badge">${service}</span>`
       : '—';
 
+    // IPs privées → pas de résolution
+    const isPrivate = (ip) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
+
+    const srcHtml = `
+      <span class="ip-cell">
+        <span class="ip-addr">${conn.src}</span>
+        ${!isPrivate(conn.src) ? `<span class="ip-hostname" data-ip="${conn.src}">…</span>` : ''}
+      </span>`;
+
+    const dstHtml = `
+      <span class="ip-cell">
+        <span class="ip-addr">${conn.dst}</span>
+        ${!isPrivate(conn.dst)
+          ? `<span class="ip-hostname" data-ip="${conn.dst}">…</span>
+            <span class="ip-org"     data-ip="${conn.dst}"></span>`
+          : ''}
+      </span>`;
+
     return `
       <tr class="${rowClass}">
         <td class="td-time">${time}</td>
-        <td class="td-src">${conn.src}</td>
+        <td class="td-src">${srcHtml}</td>
         <td class="td-port">${srcPort}</td>
-        <td class="td-dst">${conn.dst}</td>
+        <td class="td-dst">${dstHtml}</td>
         <td class="td-port">${dstPortHtml}</td>
         <td>${serviceHtml}</td>
         <td><span class="td-proto ${protoClass}">${proto}</span></td>
         <td class="td-flags">${this.formatFlags(flags)}</td>
         <td class="td-size">${size}</td>
-        
       </tr>`;
+  }
+
+  async resolveVisibleIPs() {
+    const pending = document.querySelectorAll('[data-ip]');
+    const seen    = new Set();
+
+    for (const el of pending) {
+      const ip = el.dataset.ip;
+      if (seen.has(ip)) continue;
+      seen.add(ip);
+
+      // évite de re-résoudre si déjà rempli
+      if (el.textContent && el.textContent !== '…') continue;
+
+      try {
+        const res  = await fetch(`/api/resolve?ip=${ip}`);
+        const data = await res.json();
+
+        // Rempli tous les spans qui portent ce data-ip
+        document.querySelectorAll(`.ip-hostname[data-ip="${ip}"]`).forEach(el => {
+          el.textContent = data.hostname || '';
+        });
+
+        document.querySelectorAll(`.ip-org[data-ip="${ip}"]`).forEach(el => {
+          const country = data.country_code || '';
+          const org     = data.org ? data.org.replace(/^AS\d+\s*/,'') : '';
+          el.innerHTML  = country || org
+            ? `<span class="ip-country">${country}</span>${org ? `<span class="ip-orgname">${org}</span>` : ''}`
+            : '';
+        });
+
+      } catch (_) { /* silencieux */ }
+    }
   }
 
   /**
