@@ -6,9 +6,10 @@
 class NetWatchApp {
   constructor() {
     this.maxConnections = 50;
-    this.connections = [];
-    this.stats = null;
-    this.deviceNames = {};
+    this.connections    = [];
+    this.stats          = null;
+    this.deviceNames    = {};     // ip → device name (local devices)
+    this._resolveCache  = {};     // ip → DNS/org data (external IPs)
     this.init();
   }
 
@@ -17,15 +18,13 @@ class NetWatchApp {
    */
   init() {
     console.log('🚀 NetWatch Dashboard Initializing...');
-    
-    // Subscribe to WebSocket events
-    wsManager.on('stats', (stats) => this.handleStatsUpdate(stats));
-    wsManager.on('alerts', (alerts) => this.handleAlerts(alerts));
-    wsManager.on('connected', () => this.handleConnected());
-    wsManager.on('disconnected', () => this.handleDisconnected());
-    wsManager.on('error', () => this.handleError());
 
-    // Initialize UI
+    wsManager.on('stats',        (stats)  => this.handleStatsUpdate(stats));
+    wsManager.on('alerts',       (alerts) => this.handleAlerts(alerts));
+    wsManager.on('connected',    ()       => this.handleConnected());
+    wsManager.on('disconnected', ()       => this.handleDisconnected());
+    wsManager.on('error',        ()       => this.handleError());
+
     this.setupUI();
     this.loadDeviceNames();
   }
@@ -34,7 +33,6 @@ class NetWatchApp {
    * Setup UI event listeners
    */
   setupUI() {
-    // Responsive table scroll indicator
     const tableWrap = document.querySelector('.table-wrap');
     if (tableWrap) {
       tableWrap.addEventListener('scroll', (e) => {
@@ -42,9 +40,23 @@ class NetWatchApp {
         const isAtBottom = Math.abs(
           target.scrollHeight - target.scrollTop - target.clientHeight
         ) < 5;
-        // Could add "more data" indicator here
       });
     }
+  }
+
+  /**
+   * Load device names from /api/devices and refresh every 5 minutes
+   */
+  async loadDeviceNames() {
+    try {
+      const res  = await fetch('/api/devices');
+      const data = await res.json();
+      (data.devices || []).forEach(d => {
+        if (d.ip && d.name) this.deviceNames[d.ip] = d.name;
+      });
+    } catch (_) {}
+
+    setTimeout(() => this.loadDeviceNames(), 5 * 60 * 1000);
   }
 
   /**
@@ -53,49 +65,28 @@ class NetWatchApp {
   handleStatsUpdate(stats) {
     this.stats = stats;
 
-    // Update header stats
     this.updateHeaderStats(stats);
-
-    // Update charts
     chartManager.updateBandwidth(stats);
     chartManager.updateProtocols(stats);
-
-    // Update top IPs
     this.updateTopIPs(stats);
-
-    // Update connections table
     this.updateConnections(stats);
-
-    this.resolveVisibleIPs();
   }
 
   /**
    * Update header statistics display
    */
   updateHeaderStats(stats) {
-    // Total packets
     const packetsEl = document.getElementById('h-packets');
-    if (packetsEl) {
-      packetsEl.textContent = this.formatNumber(stats.total_packets);
-    }
+    if (packetsEl) packetsEl.textContent = this.formatNumber(stats.total_packets);
 
-    // Bandwidth (Bytes/s to human readable)
     const bpsEl = document.getElementById('h-bps');
-    if (bpsEl) {
-      bpsEl.textContent = this.formatBytes(stats.bps) + '/s';
-    }
+    if (bpsEl) bpsEl.textContent = this.formatBytes(stats.bps) + '/s';
 
-    // Unique IPs
     const ipsEl = document.getElementById('h-ips');
-    if (ipsEl) {
-      ipsEl.textContent = this.formatNumber(stats.unique_ips);
-    }
+    if (ipsEl) ipsEl.textContent = this.formatNumber(stats.unique_ips);
 
-    // Packets per second
     const ppsEl = document.getElementById('h-pps');
-    if (ppsEl) {
-      ppsEl.textContent = this.formatNumber(stats.pps);
-    }
+    if (ppsEl) ppsEl.textContent = this.formatNumber(stats.pps);
   }
 
   /**
@@ -106,8 +97,6 @@ class NetWatchApp {
     if (!listEl) return;
 
     const topIPs = stats.top_src_ips || [];
-    const totalBytes = stats.total_bytes || 1;
-
     if (topIPs.length === 0) {
       listEl.innerHTML = '<div class="empty-state">Aucune donnée</div>';
       return;
@@ -118,14 +107,15 @@ class NetWatchApp {
     listEl.innerHTML = topIPs
       .slice(0, 10)
       .map(([ip, data]) => {
-        const bytes = data.bytes || 0;
+        const bytes      = data.bytes || 0;
         const percentage = (bytes / maxBytes) * 100;
-        const formatted = this.formatBytes(bytes);
+        const formatted  = this.formatBytes(bytes);
+        const name       = this.deviceNames[ip] ? ` · ${this.deviceNames[ip]}` : '';
 
         return `
           <div class="ip-row">
             <div class="ip-row-top">
-              <span class="ip-addr">${ip}</span>
+              <span class="ip-addr">${ip}<span class="ip-device">${name}</span></span>
               <span class="ip-bytes">${formatted}</span>
             </div>
             <div class="ip-bar-track">
@@ -164,31 +154,8 @@ class NetWatchApp {
     // Injecte le cache immédiatement après le rendu
     this._injectCachedResolutions();
 
-    // Puis fetch les IPs manquantes
+    // Fetch les IPs manquantes
     this.resolveVisibleIPs();
-  }
-
-  _injectCachedResolutions() {
-    // Injecte les noms de devices locaux
-    Object.entries(this.deviceNames).forEach(([ip, name]) => {
-      document.querySelectorAll(`.ip-addr`).forEach(el => {
-        if (el.textContent === ip) {
-          const cell = el.closest('.ip-cell');
-          if (cell && !cell.querySelector('.ip-device')) {
-            const span = document.createElement('span');
-            span.className = 'ip-device';
-            span.textContent = `· ${name}`;
-            cell.appendChild(span);
-          }
-        }
-      });
-    });
-
-    // Injecte le cache DNS externe
-    if (!this._resolveCache) return;
-    Object.entries(this._resolveCache).forEach(([ip, data]) => {
-      this._applyResolveData(ip, data);
-    });
   }
 
   /**
@@ -214,10 +181,8 @@ class NetWatchApp {
       ? `<span class="service-badge">${service}</span>`
       : '—';
 
-    // IPs privées → pas de résolution
-    const isPrivate = (ip) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
+    const isPrivate  = (ip) => /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(ip);
     const deviceName = (ip) => this.deviceNames[ip] || null;
-
 
     const srcHtml = `
       <span class="ip-cell">
@@ -235,7 +200,7 @@ class NetWatchApp {
           ? `<span class="ip-device">· ${deviceName(conn.dst)}</span>`
           : (!isPrivate(conn.dst)
               ? `<span class="ip-hostname" data-ip="${conn.dst}">…</span>
-                <span class="ip-org" data-ip="${conn.dst}"></span>`
+                 <span class="ip-org" data-ip="${conn.dst}"></span>`
               : '')
         }
       </span>`;
@@ -254,51 +219,65 @@ class NetWatchApp {
       </tr>`;
   }
 
-  async loadDeviceNames() {
-    try {
-      const res  = await fetch('/api/devices');
-      const data = await res.json();
-      (data.devices || []).forEach(d => {
-        if (d.ip && d.name) this.deviceNames[d.ip] = d.name;
+  /**
+   * Inject cached DNS/device data immediately after table redraw
+   */
+  _injectCachedResolutions() {
+    // Noms de devices locaux
+    Object.entries(this.deviceNames).forEach(([ip, name]) => {
+      document.querySelectorAll('.ip-addr').forEach(el => {
+        if (el.textContent.trim() === ip) {
+          const cell = el.closest('.ip-cell');
+          if (cell && !cell.querySelector('.ip-device')) {
+            const span       = document.createElement('span');
+            span.className   = 'ip-device';
+            span.textContent = `· ${name}`;
+            cell.appendChild(span);
+          }
+        }
       });
-    } catch (_) {}
+    });
 
-    // Refresh toutes les 5 minutes
-    setTimeout(() => this.loadDeviceNames(), 5 * 60 * 1000);
+    // DNS/org cache pour IPs externes
+    Object.entries(this._resolveCache).forEach(([ip, data]) => {
+      this._applyResolveData(ip, data);
+    });
   }
 
+  /**
+   * Resolve external IPs asynchronously
+   */
   async resolveVisibleIPs() {
     const pending = document.querySelectorAll('[data-ip]');
     const toFetch = new Set();
 
-    // Injecte depuis le cache local d'abord (instantané)
     pending.forEach(el => {
       const ip = el.dataset.ip;
-      if (this._resolveCache && this._resolveCache[ip]) {
+      if (this._resolveCache[ip]) {
         this._applyResolveData(ip, this._resolveCache[ip]);
       } else {
         toFetch.add(ip);
       }
     });
 
-    // Fetch uniquement les IPs pas encore en cache
     for (const ip of toFetch) {
       try {
         const res  = await fetch(`/api/resolve?ip=${ip}`);
         const data = await res.json();
-
-        if (!this._resolveCache) this._resolveCache = {};
         this._resolveCache[ip] = data;
-
         this._applyResolveData(ip, data);
       } catch (_) {}
     }
   }
 
+  /**
+   * Apply resolved DNS/org data to DOM spans
+   */
   _applyResolveData(ip, data) {
     document.querySelectorAll(`.ip-hostname[data-ip="${ip}"]`).forEach(el => {
       el.textContent = data.hostname || '';
     });
+
     document.querySelectorAll(`.ip-org[data-ip="${ip}"]`).forEach(el => {
       const country = data.country_code || '';
       const org     = data.org ? data.org.replace(/^AS\d+\s*/, '') : '';
@@ -322,45 +301,28 @@ class NetWatchApp {
       .join(' ');
   }
 
-  /**
-   * Handle incoming alerts
-   */
   handleAlerts(alerts) {
-    if (Array.isArray(alerts)) {
-      alertManager.processAlerts(alerts);
-    }
+    if (Array.isArray(alerts)) alertManager.processAlerts(alerts);
   }
 
-  /**
-   * Handle WebSocket connection established
-   */
   handleConnected() {
     console.log('✅ Connected to backend');
     wsManager.updateStatus('CONNECTED');
   }
 
-  /**
-   * Handle WebSocket disconnection
-   */
   handleDisconnected() {
     console.log('⚠️  Disconnected from backend');
     wsManager.updateStatus('DISCONNECTED');
   }
 
-  /**
-   * Handle WebSocket error
-   */
   handleError() {
     console.log('❌ Connection error');
     wsManager.updateStatus('ERROR');
   }
 
-  /**
-   * Format bytes for display
-   */
   formatBytes(bytes, decimals = 1) {
     const units = ['B', 'KB', 'MB', 'GB'];
-    let size = Math.abs(bytes || 0);
+    let size      = Math.abs(bytes || 0);
     let unitIndex = 0;
 
     while (size >= 1024 && unitIndex < units.length - 1) {
@@ -371,22 +333,16 @@ class NetWatchApp {
     return size.toFixed(decimals) + units[unitIndex];
   }
 
-  /**
-   * Format large numbers with thousands separators
-   */
   formatNumber(num) {
     if (typeof num !== 'number') return '0';
     return num.toLocaleString('fr-FR');
   }
 
-  /**
-   * Format time for display
-   */
   formatTime(isoString) {
     try {
       const date = new Date(isoString);
       return date.toLocaleTimeString('fr-FR', {
-        hour: '2-digit',
+        hour:   '2-digit',
         minute: '2-digit',
         second: '2-digit'
       });
@@ -400,12 +356,6 @@ class NetWatchApp {
 document.addEventListener('DOMContentLoaded', () => {
   const app = new NetWatchApp();
   console.log('✅ NetWatch Dashboard Ready');
-  
-  // Make available globally for debugging
-  window.netwatch = {
-    app,
-    wsManager,
-    chartManager,
-    alertManager
-  };
+
+  window.netwatch = { app, wsManager, chartManager, alertManager };
 });

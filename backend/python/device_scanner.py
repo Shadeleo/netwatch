@@ -15,6 +15,7 @@ import ipaddress
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
+from mac_resolver import get_mac_info
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -50,37 +51,63 @@ class DeviceStore:
             conn = self._connect()
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS local_devices (
-                    ip        TEXT PRIMARY KEY,
-                    name      TEXT,
-                    type      TEXT,
-                    method    TEXT,
-                    last_seen TEXT NOT NULL
+                    ip           TEXT PRIMARY KEY,
+                    name         TEXT,
+                    type         TEXT,
+                    method       TEXT,
+                    mac          TEXT,        -- NOUVEAU
+                    manufacturer TEXT,        -- NOUVEAU
+                    last_seen    TEXT NOT NULL
                 )
             """)
+            # Migration si la table existait déjà sans ces colonnes
+            for col in [("mac", "TEXT"), ("manufacturer", "TEXT")]:
+                try:
+                    conn.execute(f"ALTER TABLE local_devices ADD COLUMN {col[0]} {col[1]}")
+                except sqlite3.OperationalError:
+                    pass  # colonne déjà présente
             conn.commit()
             conn.close()
 
     def upsert(self, ip: str, name: str, device_type: str, method: str):
-        """Insert or update a device entry."""
-        with self._lock:
-            conn = self._connect()
-            conn.execute("""
-                INSERT INTO local_devices (ip, name, type, method, last_seen)
-                VALUES (:ip, :name, :type, :method, :last_seen)
-                ON CONFLICT(ip) DO UPDATE SET
-                    name      = excluded.name,
-                    type      = excluded.type,
-                    method    = excluded.method,
-                    last_seen = excluded.last_seen
-            """, {
-                "ip":        ip,
-                "name":      name,
-                "type":      device_type,
-                "method":    method,
-                "last_seen": _utcnow().isoformat(),
-            })
-            conn.commit()
-            conn.close()
+            """Insert or update a device entry."""
+            with self._lock:
+                conn = self._connect()
+                conn.execute("""
+                    INSERT INTO local_devices (ip, name, type, method, last_seen)
+                    VALUES (:ip, :name, :type, :method, :last_seen)
+                    ON CONFLICT(ip) DO UPDATE SET
+                        name      = excluded.name,
+                        type      = excluded.type,
+                        method    = excluded.method,
+                        last_seen = excluded.last_seen
+                """, {
+                    "ip":        ip,
+                    "name":      name,
+                    "type":      device_type,
+                    "method":    method,
+                    "last_seen": _utcnow().isoformat(),
+                })
+                conn.commit()
+                conn.close()    
+
+    def set_mac(self, ip: str, mac: str, manufacturer: str):
+            """Stocke (ou met à jour) le MAC et le fabricant pour un IP."""
+            with self._lock:
+                conn = self._connect()
+                # Crée la ligne si elle n'existe pas encore
+                conn.execute("""
+                    INSERT OR IGNORE INTO local_devices (ip, name, type, method, last_seen)
+                    VALUES (?, NULL, 'unknown', 'arp', ?)
+                """, (ip, _utcnow().isoformat()))
+                # Met à jour mac + manufacturer
+                conn.execute("""
+                    UPDATE local_devices
+                    SET mac=?, manufacturer=?, last_seen=?
+                    WHERE ip=?
+                """, (mac, manufacturer, _utcnow().isoformat(), ip))
+                conn.commit()
+                conn.close()    
 
     def get_all(self) -> list[dict]:
         """Return all known devices."""
@@ -428,17 +455,17 @@ class DeviceScanner:
         self.mdns.stop()
 
     def scan_ip(self, ip: str):
-        """
-        Probe a single local IP (called when sniffer sees a new src/dst).
-        Skips IPs already probed this session.
-        """
         if not self._is_local(ip):
             return
-
         with self._lock:
             if ip in self._seen:
                 return
             self._seen.add(ip)
+
+        # NOUVEAU : lookup MAC depuis la table ARP
+        mac_info = get_mac_info(ip)
+        if mac_info["mac"]:
+            self.store.set_mac(ip, mac_info["mac"], mac_info["manufacturer"])
 
         self.mdns.query(ip)
         self.netbios.query(ip)
