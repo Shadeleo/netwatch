@@ -11,6 +11,8 @@ import os
 import sqlite3
 import threading
 import time
+import socket
+
 from datetime import datetime
 from typing import Dict, List
 from resolver import get_resolver
@@ -244,6 +246,18 @@ async def get_alerts():
         "alerts": anomaly_checker.alerts,
         "summary": {}
     }
+
+@app.get("/api/local-ip")
+async def get_local_ip():
+    """Retourne l'IP locale de la machine qui fait tourner NetWatch."""
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return {"ip": ip}
+    except Exception:
+        return {"ip": None}
 
 
 @app.get("/api/history")
